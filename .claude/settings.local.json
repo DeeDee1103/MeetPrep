@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"A:/_Development/source/repos/_ClaudeCode/meetprep/src/app/\\(dashboard\\)/briefs/[id]\")",
+      "Bash(mkdir -p \"A:/_Development/source/repos/_ClaudeCode/meetprep/src/app/api/briefs/[id]\")",
+      "Bash(cmd //c \"dir /AL A:\\\\_Development\\\\source\\\\repos\\\\_ClaudeCode\\\\meetprep\\\\node_modules 2>&1\")"
+    ]
+  }
+}
