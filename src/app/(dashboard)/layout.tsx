@@ -19,24 +19,33 @@ function getPageTitle(segment: string): string {
 }
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const isDemoMode = process.env.DEMO_MODE === 'true'
 
-  if (!user) {
-    redirect('/login')
+  let userEmail: string | null = null
+  let avatarUrl: string | null = null
+
+  if (isDemoMode) {
+    userEmail = 'demo@meetprep.ai'
+  } else {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/login')
+    }
+
+    // Fetch user profile
+    const { data: profile } = await supabase
+      .from('users')
+      .select('email, full_name, avatar_url')
+      .eq('id', user.id)
+      .single()
+
+    userEmail = profile?.email ?? user.email ?? null
+    avatarUrl = profile?.avatar_url ?? null
   }
-
-  // Fetch user profile
-  const { data: profile } = await supabase
-    .from('users')
-    .select('email, full_name, avatar_url')
-    .eq('id', user.id)
-    .single()
-
-  const userEmail = profile?.email ?? user.email ?? null
-  const avatarUrl = profile?.avatar_url ?? null
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">

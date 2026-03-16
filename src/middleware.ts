@@ -15,6 +15,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // In demo mode, bypass auth checks for all routes
+  if (process.env.DEMO_MODE === 'true') {
+    return NextResponse.next()
+  }
+
   const { supabaseResponse, user } = await updateSession(request)
 
   // If accessing a protected route without a session, redirect to login
