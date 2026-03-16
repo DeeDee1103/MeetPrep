@@ -9,6 +9,7 @@ import {
   getDomainFromEmail,
   getPlanLimit,
   isOverLimit,
+  isPersonalEmailDomain,
 } from '@/lib/utils'
 
 // ─── cn ───────────────────────────────────────────────────────────────────────
@@ -175,5 +176,54 @@ describe('isOverLimit', () => {
 
   it('never returns true for pro (unlimited)', () => {
     expect(isOverLimit('pro', 99999)).toBe(false)
+  })
+})
+
+// ─── isPersonalEmailDomain ───────────────────────────────────────────────────
+
+describe('isPersonalEmailDomain', () => {
+  it('returns true for gmail.com', () => {
+    expect(isPersonalEmailDomain('gmail.com')).toBe(true)
+  })
+
+  it('returns true for yahoo.com', () => {
+    expect(isPersonalEmailDomain('yahoo.com')).toBe(true)
+  })
+
+  it('returns true for hotmail.com', () => {
+    expect(isPersonalEmailDomain('hotmail.com')).toBe(true)
+  })
+
+  it('returns true for outlook.com', () => {
+    expect(isPersonalEmailDomain('outlook.com')).toBe(true)
+  })
+
+  it('returns true for icloud.com', () => {
+    expect(isPersonalEmailDomain('icloud.com')).toBe(true)
+  })
+
+  it('returns true for protonmail.com', () => {
+    expect(isPersonalEmailDomain('protonmail.com')).toBe(true)
+  })
+
+  it('returns true for proton.me', () => {
+    expect(isPersonalEmailDomain('proton.me')).toBe(true)
+  })
+
+  it('returns true for fastmail.com', () => {
+    expect(isPersonalEmailDomain('fastmail.com')).toBe(true)
+  })
+
+  it('returns false for corporate domain', () => {
+    expect(isPersonalEmailDomain('stripe.com')).toBe(false)
+  })
+
+  it('returns false for acme.com', () => {
+    expect(isPersonalEmailDomain('acme.com')).toBe(false)
+  })
+
+  it('is case-insensitive', () => {
+    expect(isPersonalEmailDomain('GMAIL.COM')).toBe(true)
+    expect(isPersonalEmailDomain('Gmail.Com')).toBe(true)
   })
 })
