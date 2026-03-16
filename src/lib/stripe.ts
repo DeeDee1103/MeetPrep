@@ -85,7 +85,11 @@ export async function createCheckoutSession(
     metadata: { userId },
   })
 
-  return session.url!
+  if (!session.url) {
+    throw new Error('Stripe did not return a checkout URL')
+  }
+
+  return session.url
 }
 
 export async function createBillingPortalSession(

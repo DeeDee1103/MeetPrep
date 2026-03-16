@@ -5,17 +5,20 @@ import { enrichCompany } from '@/lib/clearbit'
 import { getLinkedInProfile } from '@/lib/proxycurl'
 import { getCompanyNews } from '@/lib/news'
 import { sendBriefEmail } from '@/lib/resend'
-import { getDomainFromEmail, isOverLimit } from '@/lib/utils'
+import { getDomainFromEmail, isOverLimit, isPersonalEmailDomain } from '@/lib/utils'
 import type { Meeting, User, Brief } from '@/types'
 
 export async function POST(request: NextRequest) {
   const supabase = createClient()
 
   // Support both authenticated requests and internal webhook calls
+  // WEBHOOK_SECRET must be set and non-empty; otherwise reject all webhook auth attempts
+  const configuredSecret = process.env.WEBHOOK_SECRET
   const webhookSecret = request.headers.get('x-webhook-secret')
   const webhookUserId = request.headers.get('x-user-id')
   const isWebhookCall =
-    webhookSecret === process.env.WEBHOOK_SECRET &&
+    !!configuredSecret &&
+    webhookSecret === configuredSecret &&
     !!webhookUserId
 
   let userId: string
@@ -106,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     if (externalAttendees.length > 0) {
       const domain = getDomainFromEmail(externalAttendees[0].email)
-      const isPersonalEmail = !domain || !!domain.match(/^(gmail|yahoo|hotmail|outlook)\./i)
+      const isPersonalEmail = !domain || isPersonalEmailDomain(domain)
 
       // Run Clearbit + LinkedIn lookups in parallel
       const [clearbitResult, ...linkedinResults] = await Promise.all([
@@ -194,16 +197,17 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', meetingId)
 
-    // Increment monthly brief count
-    await supabase.rpc('increment_brief_count', { user_id_param: userId }).catch(() => {
-      // Fallback manual increment if RPC doesn't exist
+    // Increment monthly brief count using the atomic RPC (preferred for production).
+    // The direct .update() fallback is only for local development before the RPC
+    // migration has been applied — it is not safe for concurrent production traffic.
+    await supabase.rpc('increment_brief_count', { user_id_param: userId }).catch(() =>
       supabase
         .from('users')
         .update({
           briefs_generated_this_month: profile.briefs_generated_this_month + 1,
         })
         .eq('id', userId)
-    })
+    )
 
     // Send email (non-fatal)
     if (profile.email) {
