@@ -4,7 +4,7 @@ import type { LinkedInProfile } from './proxycurl'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-type BriefContent = Omit<Brief, 'id' | 'meeting_id' | 'user_id' | 'generated_at' | 'email_sent_at'>
+type BriefContent = Omit<Brief, 'id' | 'meeting_id' | 'user_id' | 'generated_at' | 'email_sent_at' | 'research_quality' | 'followup_content' | 'followup_generated_at'>
 
 interface GenerateBriefParams {
   meetingTitle: string

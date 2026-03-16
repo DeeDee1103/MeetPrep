@@ -203,14 +203,24 @@ export async function POST(request: NextRequest) {
     // Increment monthly brief count using the atomic RPC (preferred for production).
     // The direct .update() fallback is only for local development before the RPC
     // migration has been applied — it is not safe for concurrent production traffic.
-    await supabase.rpc('increment_brief_count', { user_id_param: userId }).catch(() =>
-      supabase
+    try {
+      const { error: rpcError } = await supabase.rpc('increment_brief_count', { user_id_param: userId })
+      if (rpcError) {
+        await supabase
+          .from('users')
+          .update({
+            briefs_generated_this_month: profile.briefs_generated_this_month + 1,
+          })
+          .eq('id', userId)
+      }
+    } catch {
+      await supabase
         .from('users')
         .update({
           briefs_generated_this_month: profile.briefs_generated_this_month + 1,
         })
         .eq('id', userId)
-    )
+    }
 
     // Send email (non-fatal)
     if (profile.email) {
