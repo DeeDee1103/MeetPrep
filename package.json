@@ -4,16 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "email": "email dev --dir src/emails",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "screenshots": "node scripts/screenshots.js",
+    "screenshots:install": "npx playwright install chromium --with-deps"
   },
   "dependencies": {
     "next": "14.2.5",
+    "inngest": "^3.24.0",
     "@supabase/supabase-js": "^2.44.4",
     "@supabase/ssr": "^0.4.0",
     "stripe": "^16.0.0",
@@ -42,6 +46,7 @@
     "@testing-library/react": "^16.0.0",
     "@testing-library/jest-dom": "^6.4.6",
     "jsdom": "^24.1.1",
-    "@vitest/coverage-v8": "^1.6.0"
+    "@vitest/coverage-v8": "^1.6.0",
+    "playwright": "^1.46.0"
   }
 }

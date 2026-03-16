@@ -15,16 +15,17 @@ MeetPrep is an AI-powered meeting prep SaaS. When someone books a meeting with t
 |---|---|
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | Tailwind CSS |
-| Auth | NextAuth.js + Supabase Auth |
+| Auth | Supabase Auth (email + Google OAuth) |
 | Database | Postgres via Supabase |
-| Background jobs | Inngest or Trigger.dev |
+| Background jobs | Inngest (see above row) |
 | Email sending | Resend + React Email templates |
 | Billing | Stripe |
-| AI (brief generation) | Anthropic Claude Sonnet API |
-| Company enrichment | Clearbit (start) → People Data Labs (scale) |
+| AI (brief generation) | Anthropic Claude Sonnet API (claude-sonnet-4-6) |
+| Company enrichment | Clearbit → People Data Labs (scale) |
 | LinkedIn data | ProxyCurl via RapidAPI (~$0.01/lookup) |
-| News lookup | Bing News API or Perplexity API |
-| Calendar integration | Google Calendar API + Calendly webhooks |
+| News lookup | Bing News API |
+| Background jobs | Inngest (brief generation, follow-up email cron, monthly reset cron) |
+| Calendar integration | Google Calendar API (primary); Calendly webhooks (Pro — `POST /api/webhooks/calendly`) |
 | Deployment | Vercel + Supabase |
 
 ---
@@ -41,25 +42,33 @@ Three core tables:
 
 ## Core User Flow
 
-1. User connects Google Calendar or Calendly via OAuth
-2. New booking event received via webhook → extract attendee name, email, meeting title, time
-3. Research pipeline fires (background job):
+1. User connects Google Calendar via OAuth
+2. New booking event received via Google Calendar push notification → extract attendee name, email, meeting title, time
+3. Research pipeline fires (currently inline; moving to Inngest background jobs):
    - Clearbit enrichment from email domain
    - ProxyCurl LinkedIn summary
    - Bing News recent company coverage
 4. Claude Sonnet generates structured brief from all research context
 5. HTML email delivered via Resend 1 hour before meeting
 6. Brief also viewable in app at `/briefs/[id]`
-7. After meeting time passes → AI drafts follow-up email (Pro feature)
+7. After meeting time passes → Inngest cron generates AI follow-up draft + emails user (Pro feature)
 
 ---
 
 ## Key API Endpoints
 
-- `POST /api/webhooks/calendar` — receives new meeting events from Google/Calendly
-- `GET /api/briefs/[id]` — fetch brief by ID
+- `POST /api/webhooks/calendar` — receives Google Calendar push notifications; dispatches `meetprep/brief.requested` Inngest event
+- `POST /api/webhooks/calendly` — receives Calendly `invitee.created` events (Pro); verifies HMAC signature; dispatches Inngest event
+- `POST /api/webhooks/stripe` — Stripe billing events
+- `GET/POST/PUT /api/inngest` — Inngest serve endpoint (background job runner)
+- `GET /api/briefs/[id]` — fetch brief by ID (public)
+- `POST /api/briefs/generate` — trigger brief generation (authenticated or webhook-signed)
 - `POST /api/briefs/demo` — generate demo brief on signup (DEMO_MODE)
-- `POST /api/stripe/webhook` — Stripe billing events
+- `GET /api/calendar/connect` — redirect to Google OAuth
+- `GET /api/calendar/callback` — Google OAuth callback; stores refresh token; triggers demo brief
+- `POST /api/calendar/sync` — manual sync of upcoming meetings
+- `POST /api/stripe/create-checkout` — create Stripe checkout session
+- `POST /api/stripe/create-portal` — create Stripe billing portal session
 
 ---
 
@@ -69,9 +78,24 @@ Each brief should be structured JSON with these fields:
 
 ```json
 {
-  "company_snapshot": "2-3 sentence overview",
-  "attendee_role": "title and background",
-  "agenda_items": ["item 1", "item 2", "item 3"],
+  "company_snapshot": {
+    "name": "Company Name",
+    "description": "2-3 sentence overview",
+    "industry": "SaaS",
+    "employee_count": "500-1000",
+    "logo_url": "https://...",
+    "recent_news": ["headline 1", "headline 2"]
+  },
+  "attendee_summaries": [
+    {
+      "email": "attendee@company.com",
+      "name": "Jane Smith",
+      "role": "VP of Sales",
+      "company": "Acme Corp",
+      "linkedin_summary": "15 years in B2B SaaS..."
+    }
+  ],
+  "agenda": ["item 1", "item 2", "item 3"],
   "talking_points": ["point 1", "point 2", "point 3", "point 4", "point 5"],
   "icebreakers": ["opener 1", "opener 2"],
   "risk_flags": ["e.g. company had layoffs last month"],
@@ -96,11 +120,12 @@ If enrichment fails (Gmail/Hotmail address, no company data), set `research_qual
 
 ## Pricing & Usage Limits
 
-| Plan | Price | Brief limit | Features |
-|---|---|---|---|
-| Starter | $15/mo | 20/month | Google Calendar, email delivery, company snapshot |
-| Pro | $29/mo | Unlimited | + Calendly, Slack, LinkedIn enrichment, follow-up drafts, custom prompts |
-| Team | $19/seat/mo | Unlimited | + Team dashboard, admin controls, CRM sync (roadmap) |
+| Plan | Price | Brief limit | Features | Status |
+|---|---|---|---|---|
+| Free | $0 | 3/month | Google Calendar, email delivery, company snapshot | ✅ Implemented |
+| Starter | $15/mo | 20/month | Google Calendar, email delivery, company snapshot | ✅ Implemented |
+| Pro | $29/mo | Unlimited | + Calendly, LinkedIn enrichment, follow-up drafts, custom prompts | ✅ Implemented (Calendly + follow-up drafts pending) |
+| Team | $19/seat/mo | Unlimited | + Team dashboard, admin controls, CRM sync | 🗓 Roadmap |
 
 Block brief generation at plan limits and show an upgrade prompt. Track `briefs_generated` per user per billing period in the users table.
 
@@ -125,41 +150,46 @@ Block brief generation at plan limits and show an upgrade prompt. Track `briefs_
 ## Environment Variables Required
 
 ```
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+DEMO_MODE=true
+WEBHOOK_SECRET=your_internal_webhook_secret
+
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# Auth
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
-
-# Google
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# Calendly
-CALENDLY_WEBHOOK_SIGNING_KEY=
-
-# Enrichment
-CLEARBIT_API_KEY=
-PROXYCURL_API_KEY=
-BING_NEWS_API_KEY=
-
-# AI
+# Anthropic
 ANTHROPIC_API_KEY=
 
-# Email
-RESEND_API_KEY=
-
-# Billing
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_STARTER_PRICE_ID=
 STRIPE_PRO_PRICE_ID=
 
-# Feature flags
-DEMO_MODE=true
+# Email (Resend)
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=briefs@meetprep.ai
+
+# Google Calendar
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/calendar/callback
+
+# Enrichment
+CLEARBIT_API_KEY=          # optional
+PROXYCURL_API_KEY=
+BING_NEWS_API_KEY=
+
+# Calendly (Pro)
+CALENDLY_WEBHOOK_SIGNING_KEY=
+
+# Inngest (background jobs)
+INNGEST_EVENT_KEY=
+INNGEST_SIGNING_KEY=
 ```
 
 ---
@@ -190,3 +220,9 @@ DEMO_MODE=true
 - Use `DEMO_MODE=true` locally to bypass real calendar events during development
 - Each background job step should be logged individually so failures are easy to diagnose
 - The brief viewer at `/briefs/[id]` should be publicly accessible (no auth required) so users can share briefs with colleagues
+- Auth is handled entirely by Supabase Auth (not NextAuth.js)
+- Brief generation: user-triggered = inline in `/api/briefs/generate` (maxDuration=300); webhook-triggered = Inngest background job
+- Inngest functions: `generate-brief` (event-driven), `send-followup-emails` (hourly cron), `reset-brief-counts` (monthly cron)
+- Dev: run `npm run dev` + `npm run dev:inngest` in separate terminals; Inngest Dev Server proxies to `/api/inngest`
+- Google Calendar push notifications expire every 7 days — watch renewal must be automated
+- Calendly integration: userId is passed via `utm_content` on the Calendly booking link so the webhook can identify which MeetPrep user booked

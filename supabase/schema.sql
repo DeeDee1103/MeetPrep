@@ -53,7 +53,9 @@ CREATE TABLE public.briefs (
   attendee_summaries JSONB NOT NULL DEFAULT '[]',
   research_quality TEXT NOT NULL DEFAULT 'minimal' CHECK (research_quality IN ('full', 'limited', 'minimal')),
   generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  email_sent_at TIMESTAMPTZ
+  email_sent_at TIMESTAMPTZ,
+  followup_content TEXT,
+  followup_generated_at TIMESTAMPTZ
 );
 
 -- Add foreign key from meetings.brief_id to briefs.id

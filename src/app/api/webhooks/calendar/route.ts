@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getUpcomingMeetings } from '@/lib/calendar'
+import { inngest } from '@/inngest/client'
 import type { User } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -72,18 +73,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Trigger brief generation for each new meeting (fire and forget)
-    for (const meetingId of newMeetingIds) {
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/briefs/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Pass user context via a server-side call
-          'x-webhook-secret': process.env.WEBHOOK_SECRET ?? '',
-          'x-user-id': userProfile.id,
-        },
-        body: JSON.stringify({ meetingId, userId: userProfile.id }),
-      }).catch(console.error)
+    // Dispatch Inngest events for each new meeting (background jobs)
+    if (newMeetingIds.length > 0) {
+      await inngest.send(
+        newMeetingIds.map((meetingId) => ({
+          name: 'meetprep/brief.requested' as const,
+          data: { meetingId, userId: userProfile.id },
+        }))
+      )
     }
 
     return NextResponse.json({ ok: true, new: newMeetingIds.length })

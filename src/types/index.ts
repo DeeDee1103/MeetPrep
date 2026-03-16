@@ -48,6 +48,8 @@ export type Brief = {
   research_quality: 'full' | 'limited' | 'minimal'
   generated_at: string
   email_sent_at: string | null
+  followup_content: string | null
+  followup_generated_at: string | null
 }
 
 export type CompanySnapshot = {

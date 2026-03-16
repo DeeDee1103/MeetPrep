@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
+
+// Allow up to 5 minutes for the full enrichment + Claude pipeline on Vercel Pro
+export const maxDuration = 300
 import { createClient } from '@/lib/supabase/server'
 import { generateMeetingBrief } from '@/lib/anthropic'
 import { enrichCompany } from '@/lib/clearbit'
