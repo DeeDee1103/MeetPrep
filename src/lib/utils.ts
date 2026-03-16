@@ -68,3 +68,43 @@ export function isOverLimit(
   if (limit === null) return false
   return briefs_generated_this_month >= limit
 }
+
+// Curated list of well-known personal/consumer email providers.
+// Add new domains here as needed — this is the single place to update.
+const PERSONAL_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'yahoo.com',
+  'yahoo.co.uk',
+  'yahoo.co.in',
+  'ymail.com',
+  'rocketmail.com',
+  'hotmail.com',
+  'hotmail.co.uk',
+  'hotmail.fr',
+  'live.com',
+  'live.co.uk',
+  'msn.com',
+  'outlook.com',
+  'outlook.co.uk',
+  'icloud.com',
+  'me.com',
+  'mac.com',
+  'protonmail.com',
+  'protonmail.ch',
+  'proton.me',
+  'pm.me',
+  'fastmail.com',
+  'fastmail.fm',
+  'aol.com',
+  'aim.com',
+  'zoho.com',
+  'mail.com',
+  'inbox.com',
+  'gmx.com',
+  'gmx.net',
+])
+
+export function isPersonalEmailDomain(domain: string): boolean {
+  return PERSONAL_EMAIL_DOMAINS.has(domain.toLowerCase())
+}

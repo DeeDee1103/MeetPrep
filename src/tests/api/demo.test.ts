@@ -21,7 +21,7 @@ vi.mock('@/lib/anthropic', () => ({ generateMeetingBrief: mockGenerateBrief }))
 const mockEnrichCompany = vi.fn()
 vi.mock('@/lib/clearbit', () => ({ enrichCompany: mockEnrichCompany }))
 
-const { POST } = await import('@/app/api/demo/route')
+const { POST } = await import('@/app/api/briefs/demo/route')
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
