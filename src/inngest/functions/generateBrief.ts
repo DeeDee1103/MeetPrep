@@ -144,14 +144,18 @@ export const generateBriefFn = inngest.createFunction(
         .update({ brief_id: newBriefData.id, brief_status: 'ready' })
         .eq('id', meetingId)
 
-      await supabase
-        .rpc('increment_brief_count', { user_id_param: userId })
-        .catch(() => {
-          supabase
-            .from('users')
-            .update({ briefs_generated_this_month: supabase.rpc('increment_brief_count', { user_id_param: userId }) })
-            .eq('id', userId)
-        })
+      const { error: rpcError } = await supabase.rpc('increment_brief_count', { user_id_param: userId })
+      if (rpcError) {
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('briefs_generated_this_month')
+          .eq('id', userId)
+          .single()
+        await supabase
+          .from('users')
+          .update({ briefs_generated_this_month: (currentUser?.briefs_generated_this_month ?? 0) + 1 })
+          .eq('id', userId)
+      }
 
       return newBriefData as Brief
     })
