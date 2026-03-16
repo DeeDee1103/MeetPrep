@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-const PUBLIC_ROUTES = ['/', '/login', '/signup']
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/roadmap']
 const PUBLIC_PREFIXES = ['/api/webhooks/', '/api/auth/', '/api/briefs/', '/briefs/', '/_next/', '/favicon']
 
 export async function middleware(request: NextRequest) {
