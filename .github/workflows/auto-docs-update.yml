@@ -1,0 +1,61 @@
+name: Auto Update Docs
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  auto-update-docs:
+    name: Append changelog entry if source changed without doc update
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Detect source changes and update CHANGELOG.md if needed
+        run: |
+          BASE=${{ github.base_ref }}
+          git fetch origin "$BASE"
+          CHANGED=$(git diff --name-only origin/$BASE...HEAD)
+
+          echo "=== Files changed in this PR ==="
+          echo "$CHANGED"
+          echo ""
+
+          SRC_CHANGED=$(echo "$CHANGED" | grep -cE '^src/|^supabase/' || true)
+          DOCS_CHANGED=$(echo "$CHANGED" | grep -cE '^docs/|^CHANGELOG\.md' || true)
+
+          echo "Source files changed : $SRC_CHANGED"
+          echo "Doc files changed    : $DOCS_CHANGED"
+          echo ""
+
+          if [ "$SRC_CHANGED" -gt 0 ] && [ "$DOCS_CHANGED" -eq 0 ]; then
+            echo "Source changed without doc update — appending to CHANGELOG.md"
+            DATE=$(date -u '+%Y-%m-%d')
+            ENTRY="- Automated changelog update for source changes on $DATE"
+
+            if grep -q '^## Automated' CHANGELOG.md; then
+              # Insert the new entry on the line after the ## Automated heading
+              sed -i "/^## Automated/a $ENTRY" CHANGELOG.md
+            else
+              # Prepend a new ## Automated section at the very top of the file
+              TMPFILE=$(mktemp)
+              printf '## Automated\n%s\n\n' "$ENTRY" | cat - CHANGELOG.md > "$TMPFILE"
+              mv "$TMPFILE" CHANGELOG.md
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore(docs): automated changelog update for source changes [skip ci]"
+            git push origin HEAD:${{ github.head_ref }}
+            echo "✅  CHANGELOG.md updated and pushed."
+          else
+            echo "✅  No automated changelog update needed."
+          fi
