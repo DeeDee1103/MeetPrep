@@ -6,6 +6,8 @@ MeetPrep automatically researches everyone you're about to meet and delivers a p
 
 ---
 
+> 📸 **Screenshots** of every screen are available in [`docs/screenshots/`](screenshots/README.md).
+
 ## Table of Contents
 
 1. [Getting Started](#1-getting-started)
