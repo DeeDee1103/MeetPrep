@@ -13,6 +13,7 @@ function getPageTitle(segment: string): string {
     dashboard: 'Dashboard',
     briefs: 'Brief',
     settings: 'Settings',
+    'vision-board': 'Vision Board',
   }
   return titles[segment] ?? 'MeetPrep'
 }

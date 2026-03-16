@@ -33,6 +33,12 @@ export default async function HomePage() {
           </div>
           <div className="flex items-center gap-3">
             <Link
+              href="/roadmap"
+              className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+            >
+              Roadmap
+            </Link>
+            <Link
               href="/login"
               className="text-sm text-gray-600 hover:text-gray-900 font-medium"
             >
@@ -302,6 +308,14 @@ export default async function HomePage() {
           <p className="text-sm text-gray-400">
             © {new Date().getFullYear()} MeetPrep. All rights reserved.
           </p>
+          <div className="flex items-center justify-center gap-4 mt-2">
+            <Link href="/roadmap" className="text-sm text-gray-400 hover:text-gray-600">
+              Roadmap
+            </Link>
+            <Link href="/#pricing" className="text-sm text-gray-400 hover:text-gray-600">
+              Pricing
+            </Link>
+          </div>
         </div>
       </footer>
     </main>
