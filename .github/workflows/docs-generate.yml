@@ -1,0 +1,41 @@
+name: Auto-Generate API Reference
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/app/api/**'
+      - 'supabase/schema.sql'
+      - 'scripts/generate-api-docs.js'
+
+jobs:
+  generate-api-docs:
+    name: Regenerate docs/api-reference.md
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate API reference
+        run: node scripts/generate-api-docs.js
+
+      - name: Commit updated API reference
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/api-reference.md
+          if git diff --staged --quiet; then
+            echo "No API reference changes — nothing to commit."
+          else
+            git commit -m "docs: auto-update API reference [skip ci]"
+            git push
+          fi
