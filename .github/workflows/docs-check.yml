@@ -1,0 +1,52 @@
+name: Documentation Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check-docs-updated:
+    name: Require docs update with code changes
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if documentation was updated alongside code
+        run: |
+          BASE=${{ github.base_ref }}
+          CHANGED=$(git diff --name-only origin/$BASE...HEAD)
+
+          echo "=== Files changed in this PR ==="
+          echo "$CHANGED"
+          echo ""
+
+          # Count changed source / schema files
+          SRC_CHANGED=$(echo "$CHANGED" | grep -cE '^src/|^supabase/' || true)
+          # Count changed doc files (docs/ directory or CHANGELOG.md)
+          DOCS_CHANGED=$(echo "$CHANGED" | grep -cE '^docs/|^CHANGELOG\.md' || true)
+
+          echo "Source files changed : $SRC_CHANGED"
+          echo "Doc files changed    : $DOCS_CHANGED"
+          echo ""
+
+          if [ "$SRC_CHANGED" -gt 0 ] && [ "$DOCS_CHANGED" -eq 0 ]; then
+            echo "❌  Documentation check FAILED"
+            echo ""
+            echo "You changed one or more source/schema files but did not update any documentation."
+            echo "Please update at minimum CHANGELOG.md, or the relevant file(s) in docs/."
+            echo ""
+            echo "Changed source files:"
+            echo "$CHANGED" | grep -E '^src/|^supabase/'
+            echo ""
+            echo "Tip: add the label 'skip-docs' to this PR if the change genuinely needs no docs update."
+            exit 1
+          fi
+
+          echo "✅  Documentation check passed."
+
+      - name: Skip check if 'skip-docs' label is present
+        if: contains(github.event.pull_request.labels.*.name, 'skip-docs')
+        run: echo "ℹ️  'skip-docs' label detected — documentation check skipped."
